@@ -7,6 +7,8 @@
 /build.bat
 /build.sh
 /notes.txt
-/log.txt
+/logs
 /geckodriver.log
-/data/likelist.txt
+/waifu_list
+.env
+geckodriver

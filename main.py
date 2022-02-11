@@ -87,7 +87,8 @@ async def on_ready():
 
     def parse_tu(message):
         global timing_info
-        if message.channel != roll_channel or message.author != mudae: return
+        if message.channel != roll_channel or message.author != mudae:
+            return
         match = re.search(r"""^.*?(\w+).*?                                  # Group 1: Username
                                 (can't|can).*?                              # Group 2: Claim available
                                 (\d+(?:h\ \d+)?)(?=\*\*\ min).*?            # Group 3: Claim reset
@@ -98,7 +99,8 @@ async def on_ready():
                                 (?<=\$dk).*?(ready|\d+h\ \d+)               # Group 8: $dk reset
                                 .*$                                         # End of string
                                 """, message.content, re.DOTALL | re.VERBOSE)
-        if not match: return
+        if not match:
+            return
         if match.group(1) != main_user.name: return
         # Convert __h __ to minutes
         times = []
@@ -106,10 +108,10 @@ async def on_ready():
             # Specifically, group 7 may be None if kakera is ready
             if x is None:
                 x = 0
-            elif 'h ' in x:
-                x = x.split('h ')
+            elif 'h' in x:
+                x = x.split('h')
                 x = int(x[0]) * 60 + int(x[1])
-            elif x == 'ready' or x == 'now':
+            elif x == 'ready' or x == 'now' or x == 'available':
                 x = 0
             else:
                 x = int(x)
@@ -136,10 +138,9 @@ async def on_ready():
     # Parse timers by sending $tu command
     # Only do so once by checking ready property
     if not ready:
-        logging.info('Attempting to parse $tu command')
-        pool.submit(Browser.send_text, browser, f'{config.COMMAND_PREFIX}tu')
+        logging.info('Attempting to parse $tu command... Send $tu command within 30 seconds.')
         try:
-            await client.wait_for('message', check=parse_tu, timeout=3)
+            await client.wait_for('message', check=parse_tu, timeout=30)
         except TimeoutError:
             logging.critical('Could not parse $tu command, quitting (try again)')
             browser.close()
@@ -183,8 +184,15 @@ async def on_message(message):
                 key = match.group(2)
 
         # Check if it was a roll
-        # Look for any
+        # Look for stars in embed (Example: **47**)
         match = re.search(r'(?<=\*)(\d+)', desc, re.DOTALL)
+        if match:
+            pass
+
+        # Look for picture wheel (Example: 1/31)
+        # match = re.search(r'(?<=\d)(\/)', desc, re.DOTALL) doesn't find
+
+        match = re.search(r'(:female:|:male:)', desc, re.DOTALL)
         if match:
             return
 
@@ -227,15 +235,30 @@ async def on_message(message):
         pool.submit(browser.react_emoji, emoji.name, message.id)
         return True
 
+    def parse_user_input(message):
+        pass
+
     # BEGIN ON_MESSAGE BELOW #
     global main_user, mudae, dm_channel, roll_channel, ready
     if not ready:
         return
 
+    if message.channel == roll_channel and message.author == main_user:
+        if message.content.startswith("$quit"):
+            logging.critical("User Stopping Bot")
+            try:
+                browser.close()
+            except:
+                client.loop.stop()
+                client.loop.close()
+            finally:
+                client.loop.run_until_complete(client.logout())
+
     # Only parse messages from the bot in the right channel that contain a valid embed
     if message.channel != roll_channel or message.author != mudae or not len(message.embeds) == 1 or \
             message.embeds[0].image.url == message.embeds[0].Empty:
         return
+    # Check for user input
 
     embed = message.embeds[0]
     if not (waifu_result := parse_embed()):
@@ -243,17 +266,12 @@ async def on_message(message):
     browser.set_character(waifu_result['name'])
 
     # If unclaimed waifu was on likelist
-    if waifu_result['name'] in love_array:
-        logging.warning(f'{waifu_result["name"]} in lovelist')
-        if not timer.get_claim_availability():  # No claim is available
-            logging.warning(f'Character {waifu_result["name"]} was on the lovelist but no claim is available!')
-            return
-
+    if not waifu_result['is_claimed'] and timer.get_claim_availability() and waifu_result['name'] in love_array:
+        pool.submit(browser.attempt_claim)
+        logging.info(f'{waifu_result["name"]} in lovelist')
         logging.info(f'Character {waifu_result["name"]} in lovelist, attempting marry')
-        await dm_channel.send(content=f"Character {waifu_result['name']} is in the lovelist"
-                                      f"Attempting to marry", embed=embed)
-
-        pool.submit(browser.add_heart)
+        await dm_channel.send(content=f"{waifu_result['name']} is in the lovelist"
+                                      f"Attempted to marry", embed=embed)
 
     if waifu_result['name'] in like_array and not waifu_result['is_claimed']:
         await dm_channel.send(content=f"Character {waifu_result['name']} is in the likelist:"
@@ -261,13 +279,15 @@ async def on_message(message):
 
     if waifu_result['name'] not in like_array or love_array:
         browser.set_im_state(True)
+        if config.TEST_REACT:
+            pool.submit(browser.attempt_claim)
 
     # If key was rolled
     if waifu_result['owner'] == main_user.name and waifu_result['key']:
         await dm_channel.send(content=f"{waifu_result['key']} rolled for {waifu_result['name']}", embed=embed)
 
     # If kakera loot available
-    if waifu_result['is_claimed']:
+    if waifu_result['is_claimed'] and timer.get_kakera_availablilty():
         logging.info(f'Character {waifu_result["name"]} has kakera loot...')
         logging.info('Attempting to loot kakera')
         try:
@@ -283,12 +303,12 @@ async def on_message(message):
 if __name__ == '__main__':
     with open('waifu_list/lovelist.txt', 'r') as f:
         logging.info('Parsing lovelist')
-        love_array = [x.strip() for x in [x for x in f.readlines() if not x.startswith('\n')] if not x.startswith('#')]
+        love_array = tuple({x.strip() for x in [x for x in f.readlines() if not x.startswith('\n')] if not x.startswith('#')})
         logging.info(f'Current lovelist: {love_array}')
 
     with open('waifu_list/likelist.txt', 'r') as f:
         logging.info('Parsing likelist')
-        like_array = [x.strip() for x in [x for x in f.readlines() if not x.startswith('\n')] if not x.startswith('#')]
+        like_array = tuple({x.strip() for x in [x for x in f.readlines() if not x.startswith('\n')] if not x.startswith('#')})
         logging.info(f'Current likelist: {like_array}')
 
     pool = ThreadPoolExecutor()
