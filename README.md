@@ -14,18 +14,18 @@ Auto claims from Discord Mudae bot. Adapted from my previous (now obsolete) Auto
 
 # Features Coming Soon
 Some requested and soon to be added features:
-- [] Kakera React Filtering (React on specific kakera). 
-- [] Improved $tu parse (Parse any a greater variety of $tu commands then the **vanilla** one).
-- [] Greater control parameter control while running (Change how the bot interacts without restarting the container).
-- [] Improved command timers (Bot will frequently send $tu on it's own to re-calibrate it's timers).
-- [] Better claim logic -- Claiming (the bot can claim any waifu rolled |in the past 30+ seconds| as opposed to the absolute most recent).
-- [] Better claim logic -- Filtering (If there is no desirable claim before the interval reset, bot claims most kakera roll)
-- [] Claim confirmation (The bot will confirm if the claim was a success or failure). 
-- [] React confirmation (The bot will confirm if the react was a success or failure).
-- [] Bot will support toggle snipe settings (if toggle snipe is set, bot will wait the correct time for other rolls and instant for yours).
-- [] Bot will support slash commands. 
-- [] Web based dashboard for intuitive control of the bot.
-- [] Bot will support preventing other people from claiming (Not a very nice thing to do but...)
+- [ ] Kakera React Filtering (React on specific kakera). 
+- [ ] Improved $tu parse (Parse any a greater variety of $tu commands then the **vanilla** one).
+- [ ] Greater control parameter control while running (Change how the bot interacts without restarting the container).
+- [ ] Improved command timers (Bot will frequently send $tu on it's own to re-calibrate it's timers).
+- [ ] Better claim logic -- Claiming (the bot can claim any waifu rolled |in the past 30+ seconds| as opposed to the absolute most recent).
+- [ ] Better claim logic -- Filtering (If there is no desirable claim before the interval reset, bot claims most kakera roll)
+- [ ] Claim confirmation (The bot will confirm if the claim was a success or failure). 
+- [ ] React confirmation (The bot will confirm if the react was a success or failure).
+- [ ] Bot will support toggle snipe settings (if toggle snipe is set, bot will wait the correct time for other rolls and instant for yours).
+- [ ] Bot will support slash commands. 
+- [ ] Web based dashboard for intuitive control of the bot.
+- [ ] Bot will support preventing other people from claiming (Not a very nice thing to do but...)
 
 
 ## Features
