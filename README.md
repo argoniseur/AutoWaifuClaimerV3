@@ -12,6 +12,22 @@ Major Updates Include:
 # AutoWaifuClaimer
 Auto claims from Discord Mudae bot. Adapted from my previous (now obsolete) AutoWaifuClaimer project, which used a Discord bot to listen for roll events and reacted using the pyinput module and the official Discord client. The previous implementation came with the major limitation of requiring Discord to be the main focused window, preventing the user from doing any other tasks at the same time. This new implementation solves that problem and is overall significantly more reliable and consistent.
 
+# Features Coming Soon
+Some requested and soon to be added features:
+- [] Kakera React Filtering (React on specific kakera). 
+- [] Improved $tu parse (Parse any a greater variety of $tu commands then the **vanilla** one).
+- [] Greater control parameter control while running (Change how the bot interacts without restarting the container).
+- [] Improved command timers (Bot will frequently send $tu on it's own to re-calibrate it's timers).
+- [] Better claim logic -- Claiming (the bot can claim any waifu rolled |in the past 30+ seconds| as opposed to the absolute most recent).
+- [] Better claim logic -- Filtering (If there is no desirable claim before the interval reset, bot claims most kakera roll)
+- [] Claim confirmation (The bot will confirm if the claim was a success or failure). 
+- [] React confirmation (The bot will confirm if the react was a success or failure).
+- [] Bot will support toggle snipe settings (if toggle snipe is set, bot will wait the correct time for other rolls and instant for yours).
+- [] Bot will support slash commands. 
+- [] Web based dashboard for intuitive control of the bot.
+- [] Bot will support preventing other people from claiming (Not a very nice thing to do but...)
+
+
 ## Features
 - Automatically rolling at set intervals and (optionally) only if a claim is available
 - Automatically claiming `$daily` and `$dk`
