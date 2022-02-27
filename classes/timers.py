@@ -28,7 +28,7 @@ class Timer:
         Whether a kakera loot is currently available or not.
     """
 
-    def __init__(self, browser, next_claim, next_roll, next_daily, claim_available, next_kakera, kakera_available, rollsAtLaunch):
+    def __init__(self, browser, next_claim, next_roll, next_daily, claim_available, next_kakera, kakera_available, rolls_at_launch):
         self.browser = browser
         self.claim_timer = next_claim
         self.roll_timer = next_roll
@@ -46,7 +46,7 @@ class Timer:
         self.logger.info('Timer created')
         self.logger.info(f'Claim is {"available" if claim_available else "unavailable"}')
         self.logger.info(f'Kakera loot is {"available" if kakera_available else "unavailable"}')
-        self.roll_count = rollsAtLaunch
+        self.roll_count = rolls_at_launch
 
     def get_claim_availability(self):
         return self.claim_available
