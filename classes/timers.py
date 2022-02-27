@@ -2,7 +2,9 @@ import datetime
 import logging
 import time
 from config import config
-import random
+# import random
+
+launch = True
 
 
 class Timer:
@@ -26,7 +28,7 @@ class Timer:
         Whether a kakera loot is currently available or not.
     """
 
-    def __init__(self, browser, next_claim, next_roll, next_daily, claim_available, next_kakera, kakera_available):
+    def __init__(self, browser, next_claim, next_roll, next_daily, claim_available, next_kakera, kakera_available, rollsAtLaunch):
         self.browser = browser
         self.claim_timer = next_claim
         self.roll_timer = next_roll
@@ -44,6 +46,7 @@ class Timer:
         self.logger.info('Timer created')
         self.logger.info(f'Claim is {"available" if claim_available else "unavailable"}')
         self.logger.info(f'Kakera loot is {"available" if kakera_available else "unavailable"}')
+        self.roll_count = rollsAtLaunch
 
     def get_claim_availability(self):
         return self.claim_available
@@ -70,13 +73,21 @@ class Timer:
         self.kakera_available = available
 
     def wait_for_roll(self):
+        global launch
         while True:
             hour = 3600  # Testing
             minute = 60
             end_of_interval = hour - (minute * self.time_to_roll)
             time_to_sleep = (end_of_interval + (self.roll_timer - datetime.datetime.now()).total_seconds())
             self.logger.info(f'Roll timer sleeping for {self.time_convert(time_to_sleep)}')
-            time.sleep(time_to_sleep)
+
+            # If we just launched the bot, we roll without waiting for the next interval
+            if not launch:
+                time.sleep(time_to_sleep)
+            else:
+                time.sleep(10)
+                launch = False
+
             self.roll_timer += datetime.timedelta(minutes=self.roll_duration)
             self.logger.info('Rolls have been reset')
             if config.ALWAYS_ROLL:

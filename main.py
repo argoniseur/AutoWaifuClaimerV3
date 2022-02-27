@@ -113,26 +113,58 @@ async def on_ready():
         if message.channel != roll_channel or message.author != mudae:
             logging.info("Not from Mudae, or wrong channel")
             return
-        match = re.search(r"""^.*?(\w+).*?                                  # Group 1: Username
-                                (can't|can).*?                              # Group 2: Claim available
-                                (\d+(?:h\ \d+)?)(?=\*\*\ min).*?            # Group 3: Claim reset
-                                (\d+(?:h\ \d+)?)(?=\*\*\ min).*?            # Group 4: Rolls reset
-                                (?<=\$daily).*?(available|\d+h\ \d+).*?     # Group 5: $daily reset
-                                (can't|can).*?(?=react).*?                  # Group 6: Kakera available
-                                (?:(\d+(?:h\ \d+)?)(?=\*\*\ min)|(now)).*?  # Group 7: Kakera reset
-                                (?<=\$dk).*?(ready|\d+h\ \d+)               # Group 8: $dk reset
-                                .*$                                         # End of string
-                                """, message.content, re.DOTALL | re.VERBOSE)
-        if not match:
-            logging.info("tu parse couldn't match timers perfectly.")
 
-        if match.group(1) != main_user.name:
+        # Take the username between the stars and check if we have a can't or can, maybe surrounded by two _
+        match_username = re.search(r"""^\*\*(.*)\*\*,\ you\ (?:\_\_)?(can't|can)(?:\_\_)?\ claim""", message.content, re.DOTALL | re.VERBOSE)
+        if match_username:
+            logging.info("Username: " + match_username.group(1) + " Claim: " + match_username.group(2))
+
+        # Either next claim reset is etc OR can't claim for another etc
+        match_claim_reset = re.search(r"""(?:The\ next\ claim\ reset\ is\ in\ |another\ )\*\*(\d+(?:h\ \d+)?)(?=\*\*\ min)""", message.content, re.DOTALL | re.VERBOSE)
+        if match_claim_reset:
+            logging.info("Claim reset: " + match_claim_reset.group(1))
+
+        # You have X rolls
+        match_roll_number = re.search(r"""have\ \*\*([0-9]*)\*\*\ rolls""", message.content, re.DOTALL | re.VERBOSE)
+        if match_roll_number:
+            logging.info("Number of rolls" + match_roll_number.group(1))
+
+        # Next rolls reset in etc
+        match_rolls_reset = re.search(r"""Next\ rolls\ reset\ in\ \*\*(\d+(?:h\ \d+)?)(?=\*\*\ min)""", message.content, re.DOTALL | re.VERBOSE)
+        if match_rolls_reset:
+            logging.info("Rolls reset: " + match_rolls_reset.group(1))
+
+        # Shamelessly stolen from previous version
+        match_daily_reset = re.search(r"""(?<=\$daily).*?(available|\d+h\ \d+)""", message.content, re.DOTALL | re.VERBOSE)
+        if match_daily_reset:
+            logging.info("Daily reset: " + match_daily_reset.group(1))
+
+        # You can or can't react, with maybe 2 _ before
+        match_kakera_available = re.search(r"""You\ (?:\_\_)?(can't|can).*?(?=react)""", message.content, re.DOTALL | re.VERBOSE)
+        if match_kakera_available:
+            logging.info("Kak available: " + match_kakera_available.group(1))
+
+        # Either now or a timing
+        match_kakera_reset = re.search(r"""((now)|(for\ \*\*(\d+(?:h\ \d+)?)(?=\*\*\ min)))""",
+                                           message.content, re.DOTALL | re.VERBOSE)
+        if match_kakera_available.group(1) == 'can':
+            logging.info("Kak reset is " + str(match_kakera_reset.group(1)) + " because you can kak react")
+        else:
+            logging.info("Kak reset: " + match_kakera_reset.group(1))
+
+        # Shamelessly stolen from previous version
+        match_dk_reset = re.search(r"""\$dk.*?(ready|\d+h\ \d+)""", message.content, re.DOTALL | re.VERBOSE)
+        if match_dk_reset:
+            logging.info("Dk reset: " + match_dk_reset.group(1))
+
+        if match_username.group(1) != main_user.name:
             logging.info("User name doesn't match")
             return
         # Convert __h __ to minutes
         times = []
-        for x in [match.group(3), match.group(4), match.group(5), match.group(7)]:
+        for x in [match_claim_reset.group(1), match_rolls_reset.group(1), match_daily_reset.group(1), match_kakera_reset.group(1)]:
             # Specifically, group 7 may be None if kakera is ready
+            logging.info(str(x))
             if x is None:
                 x = 0
             elif 'h' in x:
@@ -143,8 +175,9 @@ async def on_ready():
             else:
                 x = int(x)
             times.append(x)
-        kakera_available = match.group(6) == 'can'
-        claim_available = match.group(2) == 'can'
+        kakera_available = match_kakera_available.group(1) == 'can'
+        claim_available = match_username.group(2) == 'can'
+
         timing_info = {
             'claim_reset': datetime.datetime.now() + datetime.timedelta(minutes=times[0]),
             'claim_available': claim_available,
@@ -152,7 +185,9 @@ async def on_ready():
             'kakera_available': kakera_available,
             'kakera_reset': datetime.datetime.now() + datetime.timedelta(minutes=times[3]),
             'daily_reset': datetime.datetime.now() + datetime.timedelta(minutes=times[2]),
+            'rolls_at_launch': match_roll_number.group(1)
         }
+
         return True
 
     global main_user, mudae, dm_channel, roll_channel, timer, timing_info, ready
@@ -176,7 +211,7 @@ async def on_ready():
             logging.info('$tu command parsed')
             logging.info('Creating new Timer based on parsed information')
             timer = Timer(browser, timing_info["claim_reset"], timing_info["rolls_reset"], timing_info["daily_reset"],
-                          timing_info['claim_available'], timing_info["kakera_reset"], timing_info["kakera_available"])
+                          timing_info['claim_available'], timing_info["kakera_reset"], timing_info["kakera_available"], int(timing_info["rolls_at_launch"]))
 
             if config.DAILY_DURATION > 0:
                 threading.Thread(name='daily', target=timer.wait_for_daily).start()
@@ -202,6 +237,7 @@ async def on_message(message):
         series = None
         owner = None
         key = False
+        kak = 0
 
         # Get series and key value if present
         match = re.search(r'^(.*?[^<]*)(?:<:(\w+key))?', desc, re.DOTALL)
@@ -214,7 +250,7 @@ async def on_message(message):
         # Look for stars in embed (Example: **47**)
         match = re.search(r'(?<=\*)(\d+)', desc, re.DOTALL)
         if match:
-            pass
+            kak = match.group(0)
 
         # Look for picture wheel (Example: 1/31)
         # match = re.search(r'(?<=\d)(\/)', desc, re.DOTALL) doesn't find
@@ -248,7 +284,8 @@ async def on_message(message):
                 'series': series,
                 'is_claimed': is_claimed,
                 'owner': owner,
-                'key': key}
+                'key': key,
+                'kak': kak}
 
     def reaction_check(payload):
         # Return if reaction message or author incorrect
@@ -283,7 +320,9 @@ async def on_message(message):
     browser.set_character(waifu_result['name'])
 
     # If unclaimed waifu was on likelist
+    was_in_array = 0
     if not waifu_result['is_claimed'] and timer.get_claim_availability() and waifu_result['name'] in love_array:
+        was_in_array = 1
         if config.CLAIM_METHOD_CLICK:
             await client.wait_for('raw_reaction_add', check=reaction_check, timeout=10)
         else:
@@ -294,10 +333,16 @@ async def on_message(message):
                                       f"Attempted to marry", embed=embed)
 
     if waifu_result['name'] in like_array and not waifu_result['is_claimed']:
+        was_in_array = 1
         await dm_channel.send(content=f"{waifu_result['name']} is in the likelist:"
                                       f"\nhttps://discord.com/channels/{config.SERVER_ID}/{config.CHANNEL_ID}/{message.id}\n")
 
-    if waifu_result['name'] not in like_array or love_array:
+    if int(waifu_result['kak']) >= 300 and was_in_array == 0:
+        pool.submit(browser.attempt_claim)
+        await dm_channel.send(content=f"{waifu_result['name']} is {waifu_result['kak']} kaks"
+                                      f"Attempted to marry", embed=embed)
+
+    if (waifu_result['name'] not in like_array or love_array) and int(waifu_result['kak']) < 300:
         browser.set_im_state(True)
         if config.TEST_REACT:
             pool.submit(browser.attempt_claim)

@@ -68,7 +68,7 @@ class Browser:
             self.driver.find_element(By.XPATH, "//button[@type='submit']").click()
             try:
                 # Wait for main screen
-                WebDriverWait(self.driver, 15).until(lambda x: x.find_element(By.CLASS_NAME, 'textAreaSlate-9-y-k2'))
+                WebDriverWait(self.driver, 30).until(lambda x: x.find_element(By.CLASS_NAME, 'textAreaSlate-9-y-k2'))
                 if f'{config.SERVER_ID}/{config.CHANNEL_ID}' not in self.driver.current_url:
                     # Logged in, but wrong channel (some weird error)
                     raise ValueError
@@ -85,22 +85,25 @@ class Browser:
     def send_text(self, text: str):
         # For some reason, typing directly into the message box doesn't work
         # ActionChains must be used instead to type character by character
-        self.actions = ActionChains(self.driver)
+
         self.logger.info(f'Sending text: {text}')
         try:
             message_box = WebDriverWait(self.driver, 5).until(
                 lambda x: x.find_element(By.CLASS_NAME, 'textAreaSlate-9-y-k2'))
+            self.actions = ActionChains(self.driver)
+            self.actions.click(on_element=message_box)
+            for char in text:
+                self.actions.key_down(char)
+                self.actions.key_up(char)
+            self.actions.key_down(Keys.ENTER)
+            self.actions.key_up(Keys.ENTER)
+            self.actions.perform()
+            # needs to be performed in the try or the element might become stale
         except TimeoutException:
             self.logger.warning("Discord may have crashed, refreshing page")
             self.refresh()
             return self.send_text(text)
-        self.actions.click(on_element=message_box)
-        for char in text:
-            self.actions.key_down(char)
-            self.actions.key_up(char)
-        self.actions.key_down(Keys.ENTER)
-        self.actions.key_up(Keys.ENTER)
-        self.actions.perform()
+
 
     def react_emoji(self, reaction: str, message_id: int):
         self.logger.info(f'Attempting to click: {reaction}')
