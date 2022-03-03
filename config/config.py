@@ -29,9 +29,9 @@ ROLL_COMMAND = "wa"
 CLAIM_EMOJI = ":heart:"
 CLAIM_METHOD_CLICK = False  # If True claim will attempt to react on emoji instead of add one (Needs Emoji available)
 # Speed to claim Waifu in lovelist (Currently Fastest Possible)
-INSTANT_CLAIM_SPEED = 0
+INSTANT_CLAIM_SPEED = 15
 # Speed to react on kakera (Default 1 second delay)
-INSTANT_REACT_SPEED = 1
+INSTANT_REACT_SPEED = 15
 # Time between claim resets, in minutes.
 CLAIM_DURATION = 180
 
@@ -40,8 +40,9 @@ CLAIM_DURATION = 180
 ROLL_DURATION = 60
 
 # Time in the hour to start rolling. (Example: 10 means 10 mins before reset. & 50 means 50 minutes before reset.)
-TIME_TO_ROLL = 10
 RANDOM_TIME = True
+TIME_TO_ROLL = 30
+
 # Time between daily command resets, in minutes.
 # Set to 0 to disable auto dailies.
 DAILY_DURATION = 1200
@@ -53,11 +54,19 @@ DAILY_DURATION = 1200
 # Usually 1 hour is sufficient.
 KAKERA_DURATION = 60
 
+# List of emojis the bot is supposed to react to
+# whole list : EMOJI_LIST = ["kakera",	"kakeraT", "kakeraG", "kakeraY", "kakeraO", "kakeraR", "kakeraW", "kakeraL"]
+EMOJI_LIST = ["kakera", "kakeraT", "kakeraG", "kakeraY", "kakeraO", "kakeraR", "kakeraW", "kakeraL"]
+
+# The bot will claim this value or higher if encountered. 0 claims everything
+# if you don't want claiming logic based on kakera, set to 1000000000 or any high number
+CLAIM_KAK = 300
+
 # Maximum number of rolls per reset.
-MAX_ROLLS = 27
+MAX_ROLLS = 8
 
 # Set True to roll every interval despite having claims or not.
-ALWAYS_ROLL = False
+ALWAYS_ROLL = True
 
 LOG_FILE = "logs/log.txt"
 

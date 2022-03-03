@@ -104,7 +104,6 @@ class Browser:
             self.refresh()
             return self.send_text(text)
 
-
     def react_emoji(self, reaction: str, message_id: int):
         self.logger.info(f'Attempting to click: {reaction}')
         xpath = f"//*[@id='chat-messages-{message_id}']//*[@id='message-accessories-{message_id}']//*[div]//*[div]//*[div]//*[div]//*[div]"

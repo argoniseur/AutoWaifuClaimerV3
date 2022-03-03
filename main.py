@@ -26,6 +26,7 @@ import datetime
 from config import config
 from classes.browsers import Browser
 from classes.timers import Timer
+import time
 
 # noinspection PyArgumentList
 logging.basicConfig(
@@ -202,6 +203,7 @@ async def on_ready():
     if not ready:
         logging.info('Attempting to parse $tu command... Send $tu command within 60 seconds.')
         try:
+            browser.send_text("tu") # AUTO TU PARSING
             await client.wait_for('message', check=parse_tu, timeout=60)
         except TimeoutError:
             logging.critical('Could not parse $tu command, quitting (try again)')
@@ -225,6 +227,34 @@ async def on_ready():
             browser.refresh()  # Blocking call
             logging.info("Listener is ready")
             ready = True
+
+
+@client.event
+async def on_reaction_add(reaction, user):
+    # We check if it's a mudae reaction
+    if user == mudae:
+        embed = reaction.message.embeds[0]
+        # We check if it's claimed
+        if embed.footer.text:
+            match = re.search(r'(?<=Belongs to )\w+', embed.footer.text, re.DOTALL)
+            if match:
+                # if match, it's a kak reaction.
+                # Necessary to do like this to prevent any trolling with fake reactions
+                if reaction.emoji.name in config.EMOJI_LIST and timer.get_kakera_availability():
+                    logging.info(f'Attempting to loot kakera')
+                    try:
+                        await pool.submit(browser.react_emoji, reaction.emoji.name, reaction.message.id)
+                    except TimeoutError:
+                        logging.critical('First Kakera loot failed, could not detect bot reaction')
+                        try:
+                            await pool.submit(browser.react_emoji, reaction.emoji.name, reaction.message.id)
+                        except TimeoutError:
+                            logging.critical('Second attempt failed. exiting.')
+                            return
+                        else:
+                            await dm_channel.send(content=f"Kakera loot attempted for {reaction.emoji.name}")
+                else:
+                    logging.info("Kak was not in list or timer not up, no attempts made")
 
 
 @client.event
@@ -278,6 +308,7 @@ async def on_message(message):
         with open('waifu_list/rolled.txt', 'a') as f:
             f.write(f'{datetime.datetime.now()}    {name} - {series}\n')
 
+        logging.info(message.reactions[0])
         logging.info(f'Parsed roll: {name} - {series} - Claimed: {is_claimed}')
 
         return {'name': name,
@@ -342,7 +373,7 @@ async def on_message(message):
         await dm_channel.send(content=f"{waifu_result['name']} is {waifu_result['kak']} kaks"
                                       f"Attempted to marry", embed=embed)
 
-    if (waifu_result['name'] not in like_array or love_array) and int(waifu_result['kak']) < 300:
+    if (waifu_result['name'] not in like_array or love_array) and int(waifu_result['kak']) < config.CLAIM_KAK:
         browser.set_im_state(True)
         if config.TEST_REACT:
             pool.submit(browser.attempt_claim)
@@ -350,23 +381,6 @@ async def on_message(message):
     # If key was rolled
     if waifu_result['owner'] == main_user.name and waifu_result['key']:
         await dm_channel.send(content=f"{waifu_result['key']} rolled for {waifu_result['name']}", embed=embed)
-
-    # If kakera loot available
-    if waifu_result['is_claimed'] and timer.get_kakera_availability():
-        logging.info(f'Attempting to loot kakera on {waifu_result["name"]}')
-        try:
-            await client.wait_for('raw_reaction_add', check=reaction_check, timeout=10)
-        except TimeoutError:
-            logging.critical('First Kakera loot failed, could not detect bot reaction')
-            try:
-                await client.wait_for('raw_reaction_add', check=reaction_check, timeout=10)
-            except TimeoutError:
-                logging.critical('Second attempt failed. exiting.')
-                return
-        else:
-            await dm_channel.send(content=f"Kakera loot attempted for {waifu_result['name']}")
-            # TODO: Add react check
-            # timer.set_kakera_availability(False)
 
 
 if __name__ == '__main__':

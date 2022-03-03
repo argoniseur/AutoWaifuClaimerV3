@@ -85,16 +85,15 @@ class Timer:
             if not launch:
                 time.sleep(time_to_sleep)
             else:
-                time.sleep(10)
+                time.sleep(5)
                 launch = False
 
             self.roll_timer += datetime.timedelta(minutes=self.roll_duration)
             self.logger.info('Rolls have been reset')
-            if config.ALWAYS_ROLL:
+            if self.claim_available:
                 self.logger.info(f'Initiating {self.roll_count} rolls')
                 self.browser.roll(self.roll_count)
-            else:
-                if self.claim_available:
+                if config.ALWAYS_ROLL:
                     self.logger.info(f'Initiating {self.roll_count} rolls')
                     self.browser.roll(self.roll_count)
                 else:
