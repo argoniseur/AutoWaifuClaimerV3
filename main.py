@@ -233,28 +233,29 @@ async def on_ready():
 async def on_reaction_add(reaction, user):
     # We check if it's a mudae reaction
     if user == mudae:
-        embed = reaction.message.embeds[0]
-        # We check if it's claimed
-        if embed.footer.text:
-            match = re.search(r'(?<=Belongs to )\w+', embed.footer.text, re.DOTALL)
-            if match:
-                # if match, it's a kak reaction.
-                # Necessary to do like this to prevent any trolling with fake reactions
-                if reaction.emoji.name in config.EMOJI_LIST and timer.get_kakera_availability():
-                    logging.info(f'Attempting to loot kakera')
-                    try:
-                        await pool.submit(browser.react_emoji, reaction.emoji.name, reaction.message.id)
-                    except TimeoutError:
-                        logging.critical('First Kakera loot failed, could not detect bot reaction')
+        if reaction.message.embeds:
+            embed = reaction.message.embeds[0]
+            # We check if it's claimed
+            if embed.footer.text:
+                match = re.search(r'(?<=Belongs to )\w+', embed.footer.text, re.DOTALL)
+                if match:
+                    # if match, it's a kak reaction.
+                    # Necessary to do like this to prevent any trolling with fake reactions
+                    if reaction.emoji.name in config.EMOJI_LIST and timer.get_kakera_availability():
+                        logging.info(f'Attempting to loot kakera')
                         try:
                             await pool.submit(browser.react_emoji, reaction.emoji.name, reaction.message.id)
                         except TimeoutError:
-                            logging.critical('Second attempt failed. exiting.')
-                            return
-                        else:
-                            await dm_channel.send(content=f"Kakera loot attempted for {reaction.emoji.name}")
-                else:
-                    logging.info("Kak was not in list or timer not up, no attempts made")
+                            logging.critical('First Kakera loot failed, could not detect bot reaction')
+                            try:
+                                await pool.submit(browser.react_emoji, reaction.emoji.name, reaction.message.id)
+                            except TimeoutError:
+                                logging.critical('Second attempt failed. exiting.')
+                                return
+                            else:
+                                await dm_channel.send(content=f"Kakera loot attempted for {reaction.emoji.name}")
+                    else:
+                        logging.info("Kak was not in list or timer not up, no attempts made")
 
 
 @client.event
