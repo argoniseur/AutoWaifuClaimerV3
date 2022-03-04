@@ -50,6 +50,8 @@ dm_channel: discord.DMChannel
 roll_channel: discord.TextChannel
 mudae: discord.Member
 ready = False
+rolls = []
+roll_count = 0
 
 # To be parsed by $tu and used for the auto roller
 timing_info = {
@@ -203,7 +205,7 @@ async def on_ready():
     if not ready:
         logging.info('Attempting to parse $tu command... Send $tu command within 60 seconds.')
         try:
-            browser.send_text("tu") # AUTO TU PARSING
+            # browser.send_text("tu") # AUTO TU PARSING debug utility
             await client.wait_for('message', check=parse_tu, timeout=60)
         except TimeoutError:
             logging.critical('Could not parse $tu command, quitting (try again)')
@@ -214,7 +216,8 @@ async def on_ready():
             logging.info('Creating new Timer based on parsed information')
             timer = Timer(browser, timing_info["claim_reset"], timing_info["rolls_reset"], timing_info["daily_reset"],
                           timing_info['claim_available'], timing_info["kakera_reset"], timing_info["kakera_available"], int(timing_info["rolls_at_launch"]))
-
+            browser.send_text("Init")
+            time.sleep(2)
             if config.DAILY_DURATION > 0:
                 threading.Thread(name='daily', target=timer.wait_for_daily).start()
             if config.ROLL_DURATION > 0:
@@ -309,7 +312,6 @@ async def on_message(message):
         with open('waifu_list/rolled.txt', 'a') as f:
             f.write(f'{datetime.datetime.now()}    {name} - {series}\n')
 
-        logging.info(message.reactions[0])
         logging.info(f'Parsed roll: {name} - {series} - Claimed: {is_claimed}')
 
         return {'name': name,
@@ -332,7 +334,7 @@ async def on_message(message):
         return True
 
     # BEGIN ON_MESSAGE BELOW #
-    global main_user, mudae, dm_channel, roll_channel, ready
+    global main_user, mudae, dm_channel, roll_channel, ready, rolls, roll_count
     if not ready:
         return
 
@@ -350,6 +352,9 @@ async def on_message(message):
     if not (waifu_result := parse_embed()):
         return  # Return if parsing failed
     browser.set_character(waifu_result['name'])
+
+    if not waifu_result['is_claimed']:
+        await message.add_reaction("😀")
 
     # If unclaimed waifu was on likelist
     was_in_array = 0
@@ -369,15 +374,35 @@ async def on_message(message):
         await dm_channel.send(content=f"{waifu_result['name']} is in the likelist:"
                                       f"\nhttps://discord.com/channels/{config.SERVER_ID}/{config.CHANNEL_ID}/{message.id}\n")
 
-    if int(waifu_result['kak']) >= 300 and was_in_array == 0:
+    if int(waifu_result['kak']) >= config.CLAIM_KAK and was_in_array == 0:
         pool.submit(browser.attempt_claim)
-        await dm_channel.send(content=f"{waifu_result['name']} is {waifu_result['kak']} kaks"
+        await dm_channel.send(content=f"{waifu_result['name']} is {waifu_result['kak']} kaks. "
                                       f"Attempted to marry", embed=embed)
 
     if (waifu_result['name'] not in like_array or love_array) and int(waifu_result['kak']) < config.CLAIM_KAK:
         browser.set_im_state(True)
         if config.TEST_REACT:
             pool.submit(browser.attempt_claim)
+
+    if int(timer.get_tiers()) == 0 and timer.get_claim_availability() and not waifu_result['is_claimed']:
+        # It's the last rolls before reset
+        logging.info("Added to rolls list")
+        rolls.append({
+            'message': message,
+            'parsed': waifu_result,
+            'kak': waifu_result['kak']
+        })
+
+    roll_count = roll_count + 1
+    if roll_count == config.MAX_ROLLS and rolls: #config.MAX_ROLLS:
+        logging.info("Attempt to claim max roll from rolls")
+        max_roll = max(rolls, key=lambda x: x['kak'])
+
+        pool.submit(browser.react_emoji, "😀", max_roll['message'].id)
+        await dm_channel.send(content=f"{max_roll['name']} is {waifu_result['kak']} kaks"
+                                      f"Attempted to marry", embed=max_roll['message'].embeds[0])
+        rolls = []
+        roll_count = 0
 
     # If key was rolled
     if waifu_result['owner'] == main_user.name and waifu_result['key']:

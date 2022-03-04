@@ -88,7 +88,7 @@ class Browser:
 
         self.logger.info(f'Sending text: {text}')
         try:
-            message_box = WebDriverWait(self.driver, 5).until(
+            message_box = WebDriverWait(self.driver, 10).until(
                 lambda x: x.find_element(By.CLASS_NAME, 'textAreaSlate-9-y-k2'))
             self.actions = ActionChains(self.driver)
             self.actions.click(on_element=message_box)
@@ -104,9 +104,38 @@ class Browser:
             self.refresh()
             return self.send_text(text)
 
+    """ WORK IN PROGRESS
+    def add_react_to_claim(self, message_id: int):
+        self.logger.info(f'Attempting to click: ')
+        xpath_add_react_button = f"//*[@id='chat-messages-{message_id}']//*[@aria-label='Add Reaction']"
+        xpath_emoji_list = f"//html//body//div[1]//div[4]//div//div//div//div[1]//div[2]//div//div//div//div[1]//div[1]//ul//li[1]//button"
+        try:
+            # Get div containing emoji
+            button = WebDriverWait(self.driver, 7).until(lambda x: x.find_element(By.XPATH, xpath_add_react_button))
+            # Click emoji
+            # WebElement.click() breaks for some reason, use javascript instead
+            logging.info("la")
+            self.driver.execute_script('arguments[0].click();', button)
+            logging.info("euh")
+            # Check new count
+            try:
+                WebDriverWait(self.driver, 4)
+                    .until(lambda x: x.find_element(By.XPATH, xpath_emoji_list))
+                self.driver.execute_script('arguments[0].click();', button)
+            except TimeoutException:  # No increase in count
+                self.logger.warning('Emoji was found, but unsuccessfully clicked')
+                raise TimeoutError
+            else:
+                self.logger.info('Emoji successfully clicked')
+        except TimeoutException or NoSuchElementException:
+            self.logger.critical('Unable to find the add button')
+            raise TimeoutError
+    """
+
     def react_emoji(self, reaction: str, message_id: int):
         self.logger.info(f'Attempting to click: {reaction}')
         xpath = f"//*[@id='chat-messages-{message_id}']//*[@id='message-accessories-{message_id}']//*[div]//*[div]//*[div]//*[div]//*[div]"
+
         time.sleep(config.INSTANT_REACT_SPEED)
         try:
             # Get div containing emoji
