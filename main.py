@@ -404,6 +404,10 @@ async def on_message(message):
         rolls = []
         roll_count = 0
 
+    # Security in case you only roll claimed characters
+    if roll_count == config.MAX_ROLLS and not rolls:
+        roll_count = 0
+
     # If key was rolled
     if waifu_result['owner'] == main_user.name and waifu_result['key']:
         await dm_channel.send(content=f"{waifu_result['key']} rolled for {waifu_result['name']}", embed=embed)
